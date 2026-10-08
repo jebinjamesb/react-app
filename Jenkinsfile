@@ -49,15 +49,21 @@ pipeline {
             }
         }
 
-        stage('Deploy to Minikube') {
+	        stage('Deploy to Minikube') {
             steps {
                 sh """
-                    kubectl apply -f k8s-deployment.yaml
-                    kubectl set image deployment/react-app react-app=${IMAGE_TAG} --record
+                    sed -E "s|image: ${DOCKERHUB_USER}/${IMAGE_NAME}(:[^[:space:]]*)?|image: ${IMAGE_TAG}|" k8s-deployment.yaml | kubectl apply -f -
+
+                    kubectl apply -f backup-cronjob.yaml
+
+                    if ! kubectl rollout status deployment/react-app --timeout=120s; then
+                        echo "Rollout failed, rolling back..."
+                        kubectl rollout undo deployment/react-app
+                        exit 1
+                    fi
                 """
             }
         }
-    }
 
     post {
         success {
