@@ -49,7 +49,7 @@ pipeline {
             }
         }
 
-	        stage('Deploy to Minikube') {
+        stage('Deploy to Minikube') {
             steps {
                 sh """
                     sed -E "s|image: ${DOCKERHUB_USER}/${IMAGE_NAME}(:[^[:space:]]*)?|image: ${IMAGE_TAG}|" k8s-deployment.yaml | kubectl apply -f -
@@ -64,6 +64,7 @@ pipeline {
                 """
             }
         }
+    }
 
     post {
         success {
