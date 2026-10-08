@@ -1,0 +1,47 @@
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: react-app-backup
+spec:
+  accessModes:
+    - ReadWriteOnce
+  storageClassName: standard
+  resources:
+    requests:
+      storage: 1Gi
+---
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: react-app-backup
+spec:
+  schedule: "0 2 * * *"
+  successfulJobsHistoryLimit: 3
+  failedJobsHistoryLimit: 3
+  jobTemplate:
+    spec:
+      template:
+        spec:
+          restartPolicy: OnFailure
+          containers:
+            - name: backup
+              image: busybox:1.36
+              command: ["/bin/sh", "-c"]
+              args:
+                - |
+                  tar czf /backup/react-logs-$(date +%F-%H%M).tar.gz -C /data . &&
+                  find /backup -name '*.tar.gz' -mtime +7 -delete &&
+                  ls -lh /backup
+              volumeMounts:
+                - name: data
+                  mountPath: /data
+                  readOnly: true
+                - name: backup
+                  mountPath: /backup
+          volumes:
+            - name: data
+              persistentVolumeClaim:
+                claimName: react-app-data
+            - name: backup
+              persistentVolumeClaim:
+                claimName: react-app-backup
